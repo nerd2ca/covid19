@@ -3,12 +3,13 @@ var graph
 m.request({
     url: 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv',
     extract: function(xhr) {
+        var hdr
         var percountry = {}
         var maxmin = 0
         xhr.responseText.split("\n").map(function(text, linenumber) {
             var values = text.replace(/(\".*?\")/g, function(quoted) { return quoted.replace(/,/g, ".")}).split(",")
             if (linenumber == 0) {
-                // ... header
+                hdr = values
             } else {
                 var tot = percountry[values[1]] || []
                 for (var i = 4; i<values.length; i++) {
@@ -52,17 +53,19 @@ m.request({
                 offset++
                 tot.splice(0, 1)
             }
-            if (tot.length + offset > 40)
-                tot.splice(40-offset)
+            var datecoloffset = hdr.length - tot.length
             if (tot.length < 1)
                 return
             series.push({
-                name: country,
+                name: `${country}, ${tot[tot.length-1]}`,
                 color: palette.color(),
                 data: tot.map(function(n, i) {
                     return {x: i+offset, y: n}
                 }),
                 scale: d3.scale.log().domain([30, 100000]).nice(),
+                xdate: function(x) {
+                    return new Date(hdr[x - offset + datecoloffset]).toDateString()
+                },
             })
         })
         return {series: series}
@@ -79,9 +82,12 @@ m.request({
         formatter: function(series, x, y) {
             if (series.data[series.data.length-1].y<100)
                 return `${series.name}: ${y.toFixed()}`
-            var dur = `${series.data[0].x>0?'~':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'}`
+            var dur = `${series.data[0].x>0?'maybe ':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'}`
             if (series.data.length<=8 || series.data[8].y<100) dur=""
-            return `${series.name}, ${dur} ${x<8 ? 'before' : 'after'} reaching 100: ${y.toFixed()}`
+            return `${series.name}, ${series.xdate(x)} (${dur} ${x<8 ? 'before' : 'after'} C): ${y.toFixed()}`
+        },
+        xFormatter: function(d) {
+            return `C+${d-8}`
         },
     })
     var legend = new Rickshaw.Graph.Legend({
