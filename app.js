@@ -27,7 +27,7 @@ m.request({
             return a[a.length-1] - b[b.length-1]
         }).map(function(country) {
             var tot = percountry[country]
-            while (tot.length>8 && tot[8]<100)
+            while (tot.length>8 && tot[8]<100 && tot[tot.length-1]>=100)
                 tot.splice(0, 1)
             var offset = 0
             if (tot.length > 7 && tot[7] > 100) {
@@ -45,12 +45,17 @@ m.request({
                     }
                 }
             }
+            if (tot[tot.length-1] < 100)
+                while (tot.length > 0 && tot[0] < 10)
+                    tot.splice(0, 1)
             while (tot.length > 0 && tot[0] == 0) {
                 offset++
                 tot.splice(0, 1)
             }
             if (tot.length + offset > 40)
                 tot.splice(40-offset)
+            if (tot.length < 1)
+                return
             series.push({
                 name: country,
                 color: palette.color(),
@@ -72,6 +77,8 @@ m.request({
     var hoverDetail = new Rickshaw.Graph.HoverDetail({
         graph: graph,
         formatter: function(series, x, y) {
+            if (series.data[series.data.length-1].y<100)
+                return `${series.name}: ${y.toFixed()}`
             var dur = `${series.data[0].x>0?'~':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'}`
             if (series.data.length<=8 || series.data[8].y<100) dur=""
             return `${series.name}, ${dur} ${x<8 ? 'before' : 'after'} reaching 100: ${y.toFixed()}`
