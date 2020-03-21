@@ -94,21 +94,11 @@ m.request({
         orientation: 'left',
         scale: resp.series[0].scale,
     });
+    new Rickshaw.Graph.Behavior.Series.Highlight({
+        graph: graph,
+        legend: legend,
+        disabledColor: function() { return 'rgba(0, 0, 0, 0.1)' }
+    });
     graph.render()
 })
-document.getElementById("legend").addEventListener("mousemove", function(e) { legendhover(e.toElement.series || e.toElement.parentElement.series, true) })
-document.getElementById("legend").addEventListener("mouseout", function(e) { legendhover(null, false) })
 window.addEventListener("resize", function(e) { if (graph) { graph.setSize(); graph.render() } })
-function legendhover(target, keep) {
-    if (keep && !target)
-        return
-    for (var i=0; i<series.length; i++) {
-        if (!series[i].colorInitial)
-            series[i].colorInitial = series[i].color
-        if (!target || series[i].name === target.name)
-            series[i].color = series[i].colorInitial
-        else
-            series[i].color = series[i].colorInitial + '22'
-    }
-    graph.render()
-}
