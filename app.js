@@ -1,9 +1,25 @@
-var series = []
-var graph
-var xaxis
-m.request({
+var graph, xaxis, loaded
+
+window.addEventListener("resize", function(e) {
+    if (!graph)
+        return
+    graph.setSize()
+    xaxis.setSize()
+    graph.render()
+})
+
+// Reload source data every hour, update chart if it has changed.
+window.setInterval(getData, 3600000)
+
+function getData() { return m.request({
     url: 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv',
     extract: function(xhr) {
+        if (loaded && loaded !== xhr.responseText) {
+            // Updating is awkward, but reloading is easy.
+            document.location.reload()
+            return
+        }
+        loaded = xhr.responseText
         var hdr
         var percountry = {}
         var maxmin = 0
@@ -21,7 +37,7 @@ m.request({
                 percountry[values[1].replace(/"/g, "").replace(/(.*)\. (.*)/, "$2 $1")] = tot
             }
         })
-        series = []
+        var series = []
         Object.keys(percountry).sort(function(a, b){
             a = percountry[a]
             b = percountry[b]
@@ -106,8 +122,9 @@ m.request({
             series: series,
         }
     },
-}).then(function(resp) {
-    series = resp.series
+})}
+
+getData().then(function(resp) {
     graph = new Rickshaw.Graph({
         element: document.getElementById("graph"),
         renderer: "line",
@@ -145,7 +162,6 @@ m.request({
     });
     graph.render()
 })
-window.addEventListener("resize", function(e) { if (graph) { graph.setSize(); xaxis.setSize(); graph.render() } })
 
 function exponentAt(data, idx) {
     if (idx < 2 || idx > data.length)
