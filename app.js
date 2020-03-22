@@ -68,7 +68,19 @@ m.request({
                 },
             })
         })
-        return {series: series}
+        return {
+            series: series,
+            formatter: function(series, x, y) {
+                if (series.data[series.data.length-1].y<100)
+                    return `${series.name}: ${y.toFixed()}`
+                var dur = `${series.data[0].x>0?'maybe ':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'}`
+                if (series.data.length<=8 || series.data[8].y<100) dur=""
+                return `${series.name}, ${series.xdate(x)} (${dur} ${x<8 ? 'before' : 'after'} C): ${y.toFixed()}`
+            },
+            xFormatter: function(d) {
+                return `C+${d-8}`
+            },
+        }
     },
 }).then(function(resp) {
     series = resp.series
@@ -79,16 +91,8 @@ m.request({
     })
     var hoverDetail = new Rickshaw.Graph.HoverDetail({
         graph: graph,
-        formatter: function(series, x, y) {
-            if (series.data[series.data.length-1].y<100)
-                return `${series.name}: ${y.toFixed()}`
-            var dur = `${series.data[0].x>0?'maybe ':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'}`
-            if (series.data.length<=8 || series.data[8].y<100) dur=""
-            return `${series.name}, ${series.xdate(x)} (${dur} ${x<8 ? 'before' : 'after'} C): ${y.toFixed()}`
-        },
-        xFormatter: function(d) {
-            return `C+${d-8}`
-        },
+        formatter: resp.formatter,
+        xFormatter: resp.xFormatter,
     })
     var legend = new Rickshaw.Graph.Legend({
         graph: graph,
