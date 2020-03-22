@@ -61,7 +61,7 @@ m.request({
             })
             var lastExp = exponentAt(data, data.length-1)
             series.push({
-                name: country+' <span class="float-right">'+tot[tot.length-1]+(lastExp===NaN?'':' <span class="font-weight-light">@</span> '+lastExp.toFixed(2)+'</span>'),
+                name: country+' <span class="float-right">'+tot[tot.length-1]+(lastExp===NaN?'':' <span class="font-weight-light">@</span> '+Math.exp(lastExp).toFixed(2)+'&times;</span>'),
                 color: palette.color(),
                 data: data,
                 scale: d3.scale.log().domain([30, 100000]).nice(),
@@ -82,7 +82,7 @@ m.request({
                     if (exp === NaN)
                         exp = ''
                     else
-                        exp = ', exponent = '+exp.toFixed(2)
+                        exp = ', daily = '+Math.exp(exp).toFixed(2)+'&times;'
                     return `${name}, ${series.xdate(x)} (${dur} ${x<8 ? 'before' : 'after'} C): ${y.toFixed()}${exp}`
                 },
             })
