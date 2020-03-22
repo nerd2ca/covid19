@@ -20,7 +20,6 @@ m.request({
                 percountry[values[1].replace(/"/g, "").replace(/(.*)\. (.*)/, "$2 $1")] = tot
             }
         })
-        var palette = new Rickshaw.Color.Palette()
         series = []
         Object.keys(percountry).sort(function(a, b){
             a = percountry[a]
@@ -62,7 +61,6 @@ m.request({
             var lastExp = exponentAt(data, data.length-1)
             series.push({
                 name: country+' <span class="float-right">'+tot[tot.length-1]+(lastExp===NaN?'':' <span class="font-weight-light">@</span> '+Math.exp(lastExp).toFixed(2)+'&times;</span>'),
-                color: palette.color(),
                 data: data,
                 scale: d3.scale.log().domain([30, 100000]).nice(),
                 xdate: function(x) {
@@ -74,31 +72,37 @@ m.request({
                 },
                 formatter: function(series, x, y) {
                     var name = series.name.replace(/ <.*/, '')
-                    if (series.data[series.data.length-1].y<100)
-                        return `${name}: ${y.toFixed()}`
-                    var dur = `${series.data[0].x>0?'maybe ':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'}`
-                    if (series.data.length<=8 || series.data[8].y<100) dur=""
+                    var ret = name
+                    ret += ', '+series.xdate(x)
+                    if (series.data[series.data.length-1].y >= 100) {
+                        var dur = `${series.data[0].x>0?'maybe ':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'} `
+                        if (series.data.length<=8 || series.data[8].y<100) dur=""
+                        ret += ' ('+dur+(x<8 ? 'before' : 'after')+' C)'
+                    }
+                    ret += ': '+y.toFixed()
                     var exp = exponentAt(series.data, x - series.dataOffset)
-                    if (exp === NaN)
-                        exp = ''
-                    else
-                        exp = ', daily = '+Math.exp(exp).toFixed(2)+'&times;'
-                    return `${name}, ${series.xdate(x)} (${dur} ${x<8 ? 'before' : 'after'} C): ${y.toFixed()}${exp}`
+                    if (exp !== NaN)
+                        ret += ', daily = '+Math.exp(exp).toFixed(2)+'&times;'
+                    return ret
                 },
             })
         })
+        series = series.sort(function(a, b) {
+            var alen = a.data[a.data.length-1].y.toFixed(0).length
+            var blen = b.data[b.data.length-1].y.toFixed(0).length
+            if (alen != blen)
+                return alen - blen
+            a = exponentAt(a.data, a.data.length - 1 - a.dataOffset)
+            b = exponentAt(b.data, b.data.length - 1 - b.dataOffset)
+            if (a === NaN || b === NaN)
+                return 0
+            return a-b
+        })
+        var palette = new Rickshaw.Color.Palette({scheme: 'spectrum2001', interpolatedStopCount: Math.ceil(series.length/19)})
+        for (var i=series.length-1; i>=0; i--)
+            series[i].color = palette.color()
         return {
-            series: series.sort(function(a, b) {
-                var alen = a.data[a.data.length-1].y.toFixed(0).length
-                var blen = b.data[b.data.length-1].y.toFixed(0).length
-                if (alen != blen)
-                    return alen - blen
-                a = exponentAt(a.data, a.data.length - 1 - a.dataOffset)
-                b = exponentAt(b.data, b.data.length - 1 - b.dataOffset)
-                if (a === NaN || b === NaN)
-                    return 0
-                return a-b
-            }),
+            series: series,
         }
     },
 }).then(function(resp) {
