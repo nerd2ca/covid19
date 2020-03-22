@@ -1,5 +1,6 @@
 var series = []
 var graph
+var xaxis
 m.request({
     url: 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv',
     extract: function(xhr) {
@@ -127,7 +128,7 @@ m.request({
         orientation: 'left',
         scale: resp.series[0].scale,
     });
-    new Rickshaw.Graph.Axis.X({
+    xaxis = new Rickshaw.Graph.Axis.X({
         element: document.getElementById('axisx'),
         graph: graph,
         orientation: 'bottom',
@@ -144,7 +145,7 @@ m.request({
     });
     graph.render()
 })
-window.addEventListener("resize", function(e) { if (graph) { graph.setSize(); graph.render() } })
+window.addEventListener("resize", function(e) { if (graph) { graph.setSize(); xaxis.setSize(); graph.render() } })
 
 function exponentAt(data, idx) {
     if (idx < 2 || idx > data.length)
