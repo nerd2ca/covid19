@@ -56,30 +56,49 @@ m.request({
             var datecoloffset = hdr.length - tot.length
             if (tot.length < 1)
                 return
+            var data = tot.map(function(n, i) {
+                return {x: i+offset, y: n}
+            })
+            var lastExp = exponentAt(data, data.length-1)
             series.push({
-                name: `${country}, ${tot[tot.length-1]}`,
+                name: country+' <span class="float-right">'+tot[tot.length-1]+(lastExp===NaN?'':' <span class="font-weight-light">@</span> '+lastExp.toFixed(2)+'</span>'),
                 color: palette.color(),
-                data: tot.map(function(n, i) {
-                    return {x: i+offset, y: n}
-                }),
+                data: data,
                 scale: d3.scale.log().domain([30, 100000]).nice(),
                 xdate: function(x) {
                     return new Date(hdr[x - offset + datecoloffset]).toDateString()
                 },
+                dataOffset: offset,
+                xFormatter: function(d) {
+                    return `C+${d-8}`
+                },
+                formatter: function(series, x, y) {
+                    var name = series.name.replace(/ <.*/, '')
+                    if (series.data[series.data.length-1].y<100)
+                        return `${name}: ${y.toFixed()}`
+                    var dur = `${series.data[0].x>0?'maybe ':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'}`
+                    if (series.data.length<=8 || series.data[8].y<100) dur=""
+                    var exp = exponentAt(series.data, x - series.dataOffset)
+                    if (exp === NaN)
+                        exp = ''
+                    else
+                        exp = ', exponent = '+exp.toFixed(2)
+                    return `${name}, ${series.xdate(x)} (${dur} ${x<8 ? 'before' : 'after'} C): ${y.toFixed()}${exp}`
+                },
             })
         })
         return {
-            series: series,
-            formatter: function(series, x, y) {
-                if (series.data[series.data.length-1].y<100)
-                    return `${series.name}: ${y.toFixed()}`
-                var dur = `${series.data[0].x>0?'maybe ':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'}`
-                if (series.data.length<=8 || series.data[8].y<100) dur=""
-                return `${series.name}, ${series.xdate(x)} (${dur} ${x<8 ? 'before' : 'after'} C): ${y.toFixed()}`
-            },
-            xFormatter: function(d) {
-                return `C+${d-8}`
-            },
+            series: series.sort(function(a, b) {
+                var alen = a.data[a.data.length-1].y.toFixed(0).length
+                var blen = b.data[b.data.length-1].y.toFixed(0).length
+                if (alen != blen)
+                    return alen - blen
+                a = exponentAt(a.data, a.data.length - 1 - a.dataOffset)
+                b = exponentAt(b.data, b.data.length - 1 - b.dataOffset)
+                if (a === NaN || b === NaN)
+                    return 0
+                return a-b
+            }),
         }
     },
 }).then(function(resp) {
@@ -91,8 +110,8 @@ m.request({
     })
     var hoverDetail = new Rickshaw.Graph.HoverDetail({
         graph: graph,
-        formatter: resp.formatter,
-        xFormatter: resp.xFormatter,
+        formatter: function(series,x,y) { return series.formatter(series,x,y) },
+        xFormatter: function(series,x,y) { return series.xFormatter(series,x,y) },
     })
     var legend = new Rickshaw.Graph.Legend({
         graph: graph,
@@ -112,3 +131,14 @@ m.request({
     graph.render()
 })
 window.addEventListener("resize", function(e) { if (graph) { graph.setSize(); graph.render() } })
+
+function exponentAt(data, idx) {
+    if (idx < 2 || idx > data.length)
+        return NaN
+    var n = data[idx-2].y
+    var nprime = data[idx].y
+    if (n > 0 && nprime > 0)
+        return (Math.log(nprime) - Math.log(n))/2
+    else
+        return NaN
+}
