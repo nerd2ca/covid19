@@ -122,10 +122,20 @@ m.request({
         element: document.getElementById("legend"),
     })
     new Rickshaw.Graph.Axis.Y.Scaled({
-        element: document.getElementById('axis0'),
+        element: document.getElementById('axisy'),
         graph: graph,
         orientation: 'left',
         scale: resp.series[0].scale,
+    });
+    new Rickshaw.Graph.Axis.X({
+        element: document.getElementById('axisx'),
+        graph: graph,
+        orientation: 'bottom',
+        ticks: 7,
+        tickFormat: function(x) {
+            x-=8
+            return 'C'+(x>=0?'+':'-')+Math.abs(x).toString()
+        },
     });
     new Rickshaw.Graph.Behavior.Series.Highlight({
         graph: graph,
