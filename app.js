@@ -12,7 +12,7 @@ window.addEventListener("resize", function(e) {
 window.setInterval(getData, 3600000)
 
 function getData() { return m.request({
-    url: 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv',
+    url: 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv',
     extract: function(xhr) {
         if (loaded && loaded !== xhr.responseText) {
             // Updating is awkward, but reloading is easy.
