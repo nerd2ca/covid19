@@ -30,7 +30,9 @@ function getData() { return m.request({
             } else {
                 var tot = percountry[values[1]] || []
                 for (var i = 4; i<values.length; i++) {
-                    tot[i-4] = (tot[i-4] || 0) + parseInt(values[i] || '0')
+                    if (!values[i])
+                        values[i] = i>4 ? values[i-1] : '0'
+                    tot[i-4] = (tot[i-4] || 0) + parseInt(values[i])
                 }
                 if (tot[0] > maxmin)
                     maxmin = tot[0]
