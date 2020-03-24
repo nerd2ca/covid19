@@ -30,11 +30,11 @@ function getData() { return m.request({
             } else {
                 var tot = percountry[values[1]] || []
                 for (var i = 4; i<values.length; i++) {
-                    tot[i-4] = (tot[i-4] || 0) + parseInt(values[i])
+                    tot[i-4] = (tot[i-4] || 0) + parseInt(values[i] || '0')
                 }
                 if (tot[0] > maxmin)
                     maxmin = tot[0]
-                percountry[values[1].replace(/"/g, "").replace(/(.*)\. (.*)/, "$2 $1")] = tot
+                percountry[(values[1] || '').replace(/"/g, "").replace(/(.*)\. (.*)/, "$2 $1")] = tot
             }
         })
         var series = []
