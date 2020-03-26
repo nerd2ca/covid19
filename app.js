@@ -1,3 +1,5 @@
+var shifty = false
+var recoverDays = 14
 var graph, xaxis, loaded
 
 window.addEventListener("resize", function(e) {
@@ -39,6 +41,23 @@ function getData() { return m.request({
                 percountry[(values[1] || '').replace(/"/g, "").replace(/(.*)\. (.*)/, "$2 $1")] = tot
             }
         })
+        // Translate cumulative reported cases to estimate of active
+        // cases by subtracting cases that existed 14 days ago.
+        Object.keys(percountry).map(function(c) {
+            for (var i=percountry[c].length-1; i>=recoverDays; i--) {
+                percountry[c][i] -= percountry[c][i-recoverDays]
+                if (percountry[c][i] < 1)
+                    percountry[c][i] = 1 // Avoid dividing by zero when using log scale
+            }
+            percountry[c].splice(0, recoverDays)
+        })
+        var max = 0
+        Object.values(percountry).map(function(tot){
+            for (var i=0; i<tot.length; i++)
+                if (max<tot[i])
+                    max=tot[i]
+        })
+        console.log(max)
         var series = []
         Object.keys(percountry).sort(function(a, b){
             a = percountry[a]
@@ -46,28 +65,35 @@ function getData() { return m.request({
             return a[a.length-1] - b[b.length-1]
         }).map(function(country) {
             var tot = percountry[country]
-            while (tot.length>8 && tot[8]<100 && tot[tot.length-1]>=100)
-                tot.splice(0, 1)
+            if (tot[tot.length-1]>=100 && shifty)
+                while (tot.length>8 && tot[8]<100)
+                    // Shift data to the left until the 100-cases
+                    // threshold happens before x=8
+                    tot.splice(0, 1)
             var offset = 0
-            if (tot.length > 7 && tot[7] > 100) {
-                for (var i=0; i<series.length; i++) {
-                    if (series[i].data[0].x > 0)
-                        continue
-                    for (var j=0; j<series[i].data.length-1; j++) {
+            if (tot.length > 7 && tot[7] > 100 && shifty) {
+                // Shift data to the right until the first point lines
+                // up with another (non-shifted) country
+                Object.keys(percountry).map(function(c) {
+                    if (c == country || percountry[c].length < 8 || percountry[c][7] > 100 || percountry[c][percountry[c].length-1] < 100)
+                        return
+                    var joff
+                    for (joff=0; joff<percountry[c].length-8 && percountry[c][joff+8]<100; joff++) {}
+                    for (var j=0; j<percountry[c].length-1; j++) {
                         if (offset > 0 && j >= offset) {
                             break
                         }
-                        if (series[i].data[j].y < tot[0] && series[i].data[j+1].y >= tot[0]) {
-                            offset = j
+                        if (percountry[c][j] < tot[0] && percountry[c][j+1] >= tot[0]) {
+                            offset = j-joff
                             break
                         }
                     }
-                }
+                })
             }
-            if (tot[tot.length-1] < 100)
+            if (tot[tot.length-1] < 100 && shifty)
                 while (tot.length > 0 && tot[0] < 10)
                     tot.splice(0, 1)
-            while (tot.length > 0 && tot[0] == 0) {
+            while (tot.length > 0 && tot[0] == 0 && shifty) {
                 offset++
                 tot.splice(0, 1)
             }
@@ -81,26 +107,31 @@ function getData() { return m.request({
             series.push({
                 name: country+' <span class="float-right">'+tot[tot.length-1]+(lastExp===NaN?'':' <span class="font-weight-light">@</span> '+Math.exp(lastExp).toFixed(2)+'&times;</span>'),
                 data: data,
-                scale: d3.scale.log().domain([30, 100000]).nice(),
+                scale: d3.scale.log().domain([8, max]),
                 xdate: function(x) {
                     return new Date(hdr[x - offset + datecoloffset]).toDateString()
                 },
                 dataOffset: offset,
-                xFormatter: function(d) {
-                    return `C+${d-8}`
+                xFormatter: function(x) {
+                    if (shifty)
+                        return `C+${x-8}`
+                    var t = new Date(hdr[x - offset + datecoloffset])
+                    return t.toDateString().replace(' 2020', '').replace(/^... (...) 0?([0-9])/, '$1 $2')
                 },
                 formatter: function(series, x, y) {
                     var name = series.name.replace(/ <.*/, '')
                     var ret = name
-                    ret += ', '+series.xdate(x)
-                    if (series.data[series.data.length-1].y >= 100) {
-                        var dur = `${series.data[0].x>0?'maybe ':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'} `
-                        if (series.data.length<=8 || series.data[8].y<100) dur=""
-                        ret += ' ('+dur+(x<8 ? 'before' : 'after')+' C)'
+                    if (shifty) {
+                        ret += ', '+series.xdate(x)
+                        if (series.data[series.data.length-1].y >= 100) {
+                            var dur = `${series.data[0].x>0?'maybe ':''}${Math.abs(x-8)} day${Math.abs(x-8)==1?'':'s'} `
+                            if (series.data.length<=8 || series.data[8].y<100) dur=""
+                            ret += ' ('+dur+(x<8 ? 'before' : 'after')+' C)'
+                        }
                     }
                     ret += ': '+y.toFixed()
                     var exp = exponentAt(series.data, x - series.dataOffset)
-                    if (exp !== NaN)
+                    if (!isNaN(exp))
                         ret += ', daily = '+Math.exp(exp).toFixed(2)+'&times;'
                     return ret
                 },
@@ -152,10 +183,7 @@ getData().then(function(resp) {
         graph: graph,
         orientation: 'bottom',
         ticks: 7,
-        tickFormat: function(x) {
-            x-=8
-            return 'C'+(x>=0?'+':'-')+Math.abs(x).toString()
-        },
+        tickFormat: resp.series[0].xFormatter,
     });
     new Rickshaw.Graph.Behavior.Series.Highlight({
         graph: graph,

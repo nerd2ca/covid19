@@ -14,13 +14,15 @@
     <div class="container-fluid">
       <div class="row" style="height: 5%">
         <div class="col-12">
-          <h3 class="text-center">reported COVID-19 infection rate</h3>
+          <h3 class="text-center">COVID-19: estimated active cases</h3>
         </div>
       </div>
       <div class="row" style="height: 90%">
         <div id="axisy" class="col-1 h-100" style="padding: 0;"></div>
         <div id="graph" class="col-9 h-100" style="padding: 0;"></div>
-        <div id="legend" class="col-2 h-100" style="padding: 0; overflow: hidden;"></div>
+        <div class="col-2 h-100" style="padding: 0 0 0 0.5em; overflow: hidden;">
+          <div id="legend"></div>
+        </div>
       </div>
       <div class="row" style="height: 5%">
         <div class="col-1 h-100"></div>
@@ -28,7 +30,9 @@
       </div>
       <div class="row" style="height: 5%">
         <div class="col-12">
-          <p class="text-center">aligned to first day with &ge;100 cases ("C"), where applicable</p>
+          <p class="text-center">
+            estimate based on reported cases and 14-day recovery time
+          </p>
           <p class="text-center">
             chart refreshes automatically with latest data from <a href="https://github.com/CSSEGISandData/COVID-19/blob/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv">github.com/CSSEGISandData/COVID-19</a>
             <br />
